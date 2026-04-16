@@ -93,7 +93,7 @@ router.put("/:id", async (req, res) => {
       req.params.id,
       {
         name,
-        country, // ✅ include country here too
+        country, 
         startDate: startDate ? new Date(startDate) : null,
         endDate: endDate ? new Date(endDate) : null,
         weather,

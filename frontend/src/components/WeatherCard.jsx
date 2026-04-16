@@ -1,171 +1,110 @@
 import React, { useState, useEffect } from 'react';
 
-const WeatherCard = ({ destination }) => {
+const WeatherCard = ({ destination, addSuggestedItem }) => {
   const [weather, setWeather] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Mock weather data for demonstration
-  const getMockWeatherData = (cityName) => {
-    const weatherConditions = [
+  // Generate mock weather
+  const getMockWeatherData = (city) => {
+    const conditions = [
       { condition: 'sunny', temp: 25, humidity: 45, wind: 15, icon: '☀️' },
       { condition: 'cloudy', temp: 20, humidity: 60, wind: 10, icon: '☁️' },
       { condition: 'rainy', temp: 18, humidity: 80, wind: 20, icon: '🌧️' },
       { condition: 'partly cloudy', temp: 22, humidity: 55, wind: 12, icon: '⛅' }
     ];
-    
-    // Simple hash function to consistently get weather for same city
-    const hash = cityName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const weatherIndex = hash % weatherConditions.length;
-    const baseWeather = weatherConditions[weatherIndex];
-    
+    const hash = city.split('').reduce((a,c)=>a+c.charCodeAt(0),0);
+    const base = conditions[hash % conditions.length];
     return {
-      ...baseWeather,
-      city: cityName,
+      ...base,
+      city,
       country: destination.country,
-      temp: baseWeather.temp + Math.floor(Math.random() * 10) - 5, // Add some variation
-      description: `${baseWeather.condition} skies`,
-      feelsLike: baseWeather.temp + Math.floor(Math.random() * 6) - 3,
-      forecast: Array.from({ length: 5 }, (_, i) => ({
-        day: new Date(Date.now() + (i + 1) * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { weekday: 'short' }),
-        icon: weatherConditions[Math.floor(Math.random() * weatherConditions.length)].icon,
-        high: baseWeather.temp + Math.floor(Math.random() * 8) - 2,
-        low: baseWeather.temp - Math.floor(Math.random() * 8) - 2,
+      temp: base.temp + Math.floor(Math.random()*10-5),
+      description: `${base.condition} skies`,
+      feelsLike: base.temp + Math.floor(Math.random()*6-3),
+      forecast: Array.from({length:5},(_,i)=>({
+        day: new Date(Date.now()+(i+1)*86400000).toLocaleDateString('en-US',{weekday:'short'}),
+        icon: conditions[Math.floor(Math.random()*conditions.length)].icon,
+        high: base.temp + Math.floor(Math.random()*8-2),
+        low: base.temp - Math.floor(Math.random()*8-2)
       }))
     };
   };
 
   useEffect(() => {
-    if (!destination) return;
-
+    if(!destination) return;
     setLoading(true);
     setError(null);
-
-    // Simulate API call delay
-    const timer = setTimeout(() => {
-      try {
-        const weatherData = getMockWeatherData(destination.name);
-        setWeather(weatherData);
-        setLoading(false);
-      } catch (err) {
-        setError('Failed to load weather data');
-        setLoading(false);
-      }
-    }, 1000);
-
-    return () => clearTimeout(timer);
+    const timer = setTimeout(()=>{
+      try { setWeather(getMockWeatherData(destination.name)); }
+      catch { setError('Failed to load weather'); }
+      finally { setLoading(false); }
+    }, 500);
+    return ()=>clearTimeout(timer);
   }, [destination]);
 
-  const getPackingSuggestions = (weather) => {
-    if (!weather) return [];
-
-    const suggestions = [];
-    
-    if (weather.temp > 25) {
-      suggestions.push('🩳 Pack light, breathable clothing');
-      suggestions.push('🧴 Don\'t forget sunscreen');
-      suggestions.push('🕶️ Bring sunglasses');
-    } else if (weather.temp < 10) {
-      suggestions.push('🧥 Pack warm layers');
-      suggestions.push('🧤 Bring gloves and hat');
-      suggestions.push('👢 Pack warm boots');
-    } else {
-      suggestions.push('👕 Pack layered clothing');
-      suggestions.push('🧥 Bring a light jacket');
-    }
-
-    if (weather.condition.includes('rain') || weather.humidity > 70) {
-      suggestions.push('☂️ Pack an umbrella');
-      suggestions.push('🧥 Bring a waterproof jacket');
-    }
-
-    if (weather.wind > 15) {
-      suggestions.push('🧢 Pack a hat or cap');
-      suggestions.push('🧥 Bring windproof clothing');
-    }
-
-    return suggestions.slice(0, 3); // Limit to 3 suggestions
+  const packingSuggestions = (w) => {
+    if(!w) return [];
+    const s=[];
+    if(w.temp>25){s.push('🩳 Light clothing','🧴 Sunscreen','🕶️ Sunglasses');}
+    else if(w.temp<10){s.push('🧥 Warm layers','🧤 Gloves & hat','👢 Warm boots');}
+    else s.push('👕 Layered clothing','🧥 Light jacket');
+    if(w.condition.includes('rain')||w.humidity>70) s.push('☂️ Umbrella','🧥 Waterproof jacket');
+    if(w.wind>15) s.push('🧢 Hat','🧥 Windproof clothes');
+    return s.slice(0,3);
   };
 
-  if (!destination) return null;
+  if(!destination) return null;
 
   return (
-    <div className="weather-card">
-      <div className="weather-header">
-        <h3 className="weather-title">Weather Forecast</h3>
-        <span className="weather-location">
-          {destination.name}, {destination.country}
-        </span>
-      </div>
+    <div className="weather-card bg-white rounded-lg shadow-md p-4">
+      <h3 className="font-semibold text-lg mb-2">Weather Forecast</h3>
+      <span className="text-sm text-gray-500 mb-3 block">{destination.name}, {destination.country}</span>
 
-      {loading && (
-        <div className="weather-loading">
-          <div className="loading-spinner"></div>
-          <span>Loading weather...</span>
-        </div>
-      )}
-
-      {error && (
-        <div className="weather-error">
-          <span className="error-icon">❌</span>
-          <span>{error}</span>
-        </div>
-      )}
+      {loading && <div className="text-gray-500">Loading weather...</div>}
+      {error && <div className="text-red-500">{error}</div>}
 
       {weather && !loading && (
         <>
-          <div className="current-weather">
-            <div className="weather-main">
-              <div className="weather-icon">{weather.icon}</div>
-              <div className="weather-temp">{weather.temp}°C</div>
-            </div>
-            <div className="weather-details">
-              <div className="weather-description">{weather.description}</div>
-              <div className="weather-feels-like">Feels like {weather.feelsLike}°C</div>
+          <div className="flex items-center gap-4 mb-4">
+            <div className="text-4xl">{weather.icon}</div>
+            <div>
+              <div className="text-xl font-semibold">{weather.temp}°C</div>
+              <div className="text-sm text-gray-600">{weather.description}</div>
+              <div className="text-sm text-gray-500">Feels like {weather.feelsLike}°C</div>
             </div>
           </div>
 
-          <div className="weather-stats">
-            <div className="stat-item">
-              <span className="stat-icon">💧</span>
-              <div className="stat-content">
-                <span className="stat-label">Humidity</span>
-                <span className="stat-value">{weather.humidity}%</span>
-              </div>
-            </div>
-            <div className="stat-item">
-              <span className="stat-icon">💨</span>
-              <div className="stat-content">
-                <span className="stat-label">Wind</span>
-                <span className="stat-value">{weather.wind} km/h</span>
-              </div>
-            </div>
+          <div className="flex gap-4 mb-4">
+            <div>💧 {weather.humidity}% Humidity</div>
+            <div>💨 {weather.wind} km/h Wind</div>
           </div>
 
-          <div className="weather-forecast">
-            <h4 className="forecast-title">5-Day Forecast</h4>
-            <div className="forecast-list">
-              {weather.forecast.map((day, index) => (
-                <div key={index} className="forecast-item">
-                  <span className="forecast-day">{day.day}</span>
-                  <span className="forecast-icon">{day.icon}</span>
-                  <span className="forecast-temps">
-                    <span className="high">{day.high}°</span>
-                    <span className="low">{day.low}°</span>
-                  </span>
+          <div className="mb-4">
+            <h4 className="font-semibold mb-2">5-Day Forecast</h4>
+            <div className="flex gap-2 overflow-x-auto">
+              {weather.forecast.map((d,i)=>(
+                <div key={i} className="p-2 bg-gray-100 rounded text-center min-w-[60px]">
+                  <div>{d.day}</div>
+                  <div>{d.icon}</div>
+                  <div><span className="font-semibold">{d.high}°</span>/<span>{d.low}°</span></div>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="packing-suggestions">
-            <h4 className="suggestions-title">Packing Suggestions</h4>
-            <div className="suggestions-list">
-              {getPackingSuggestions(weather).map((suggestion, index) => (
-                <div key={index} className="suggestion-item">
-                  {suggestion}
-                </div>
-              ))}
+          <div>
+            <h4 className="font-semibold mb-2">Packing Suggestions</h4>
+            <div className="flex gap-2 flex-wrap">
+              {packingSuggestions(weather).map((s,i)=>{
+                const cleanName = s.replace(/^[\p{Emoji}\s]+/u, '').trim();
+                return (
+                  <button key={i} className="bg-gray-200 px-3 py-1 rounded hover:bg-gray-300"
+                    onClick={()=>addSuggestedItem?.({name: cleanName, category: 'Accessories', packed: false})}>
+                    {s}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </>

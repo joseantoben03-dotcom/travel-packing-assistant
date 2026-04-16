@@ -36,6 +36,51 @@ router.post("/", async (req, res) => {
 });
 
 // -----------------------------
+// SUGGESTED ITEMS BASED ON DESTINATION WEATHER
+// (MUST be before /:destinationId to avoid route collision)
+// -----------------------------
+const suggestedItemsByWeather = {
+  sunny: [
+    { name: "Sunglasses", category: "Accessories", priority: "medium" },
+    { name: "Sunscreen", category: "Toiletries", priority: "high" },
+    { name: "Hat/Cap", category: "Clothes", priority: "low" },
+  ],
+  rainy: [
+    { name: "Umbrella", category: "Accessories", priority: "medium" },
+    { name: "Raincoat", category: "Clothes", priority: "high" },
+  ],
+  cold: [
+    { name: "Jacket", category: "Clothes", priority: "high" },
+    { name: "Gloves", category: "Clothes", priority: "medium" },
+    { name: "Thermal Wear", category: "Clothes", priority: "high" },
+  ],
+  default: [
+    { name: "Passport", category: "Documents", priority: "high" },
+    { name: "Phone Charger", category: "Electronics", priority: "high" },
+    { name: "Toothbrush", category: "Toiletries", priority: "medium" },
+  ],
+};
+
+router.get("/suggestions/:destinationName", async (req, res) => {
+  try {
+    const { destinationName } = req.params;
+    const destination = await Destination.findOne({ name: destinationName });
+    let weatherKey = "default";
+
+    if (destination?.weather) {
+      const w = destination.weather.toLowerCase();
+      if (w.includes("cold")) weatherKey = "cold";
+      else if (w.includes("hot") || w.includes("sunny")) weatherKey = "sunny";
+      else if (w.includes("rain")) weatherKey = "rainy";
+    }
+
+    res.json(suggestedItemsByWeather[weatherKey]);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch suggested items" });
+  }
+});
+
+// -----------------------------
 // READ ITEMS FOR DESTINATION
 // -----------------------------
 router.get("/:destinationId", async (req, res) => {
@@ -106,53 +151,6 @@ router.delete("/:id", async (req, res) => {
     res.json({ message: "Item deleted successfully" });
   } catch (err) {
     res.status(500).json({ error: err.message });
-  }
-});
-
-// -----------------------------
-// SUGGESTED ITEMS BASED ON DESTINATION WEATHER
-// -----------------------------
-const suggestedItemsByWeather = {
-  sunny: [
-    { name: "Sunglasses", category: "Accessories", priority: "medium" },
-    { name: "Sunscreen", category: "Toiletries", priority: "high" },
-    { name: "Hat/Cap", category: "Clothes", priority: "low" },
-  ],
-  rainy: [
-    { name: "Umbrella", category: "Accessories", priority: "medium" },
-    { name: "Raincoat", category: "Clothes", priority: "high" },
-  ],
-  cold: [
-    { name: "Jacket", category: "Clothes", priority: "high" },
-    { name: "Gloves", category: "Clothes", priority: "medium" },
-    { name: "Thermal Wear", category: "Clothes", priority: "high" },
-  ],
-  default: [
-    { name: "Passport", category: "Documents", priority: "high" },
-    { name: "Phone Charger", category: "Electronics", priority: "high" },
-    { name: "Toothbrush", category: "Toiletries", priority: "medium" },
-  ],
-};
-
-// Endpoint: GET suggested items
-router.get("/suggestions/:destinationName", async (req, res) => {
-  try {
-    const { destinationName } = req.params;
-
-    // Fetch destination from DB to check weather
-    const destination = await Destination.findOne({ name: destinationName });
-    let weatherKey = "default";
-
-    if (destination?.weather) {
-      const w = destination.weather.toLowerCase();
-      if (w.includes("cold")) weatherKey = "cold";
-      else if (w.includes("hot") || w.includes("sunny")) weatherKey = "sunny";
-      else if (w.includes("rain")) weatherKey = "rainy";
-    }
-
-    res.json(suggestedItemsByWeather[weatherKey]);
-  } catch (err) {
-    res.status(500).json({ error: "Failed to fetch suggested items" });
   }
 });
 

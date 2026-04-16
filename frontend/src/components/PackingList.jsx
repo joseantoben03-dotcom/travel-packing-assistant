@@ -1,6 +1,5 @@
-// src/components/PackingList.jsx
 import React, { useState, useEffect } from "react";
-import api from "../services/apiService";
+import apiService from "../services/apiService";
 
 const PackingList = ({ destination }) => {
   const [items, setItems] = useState([]);
@@ -56,8 +55,8 @@ const PackingList = ({ destination }) => {
 
   const fetchItems = async (destinationId) => {
     try {
-      const res = await api.get(`/items/${destinationId}`);
-      setItems(res.data);
+      const data = await apiService.getItems(destinationId);
+      setItems(data);
     } catch (err) {
       console.error("❌ Failed to fetch packing list:", err);
     }
@@ -65,9 +64,9 @@ const PackingList = ({ destination }) => {
 
   const handleToggleItem = async (id) => {
     try {
-      await api.patch(`/items/${id}/toggle`);
+      const updated = await apiService.toggleItemPacked(id);
       setItems((prev) =>
-        prev.map((i) => (i._id === id ? { ...i, packed: !i.packed } : i))
+        prev.map((i) => (i._id === id ? updated : i))
       );
     } catch (err) {
       console.error("❌ Failed to toggle item:", err);
@@ -76,7 +75,7 @@ const PackingList = ({ destination }) => {
 
   const handleDeleteItem = async (id) => {
     try {
-      await api.delete(`/items/${id}`);
+      await apiService.deleteItem(id);
       setItems((prev) => prev.filter((i) => i._id !== id));
     } catch (err) {
       console.error("❌ Failed to delete item:", err);
@@ -85,14 +84,13 @@ const PackingList = ({ destination }) => {
 
   const handleAddSuggestedItem = async (item) => {
     try {
-      const newItem = {
-        ...item,
-        packed: false,
+      const newItem = await apiService.addItem({
+        name: item.name,
+        category: item.category || "General",
         priority: item.priority || "medium",
         destinationId: destination._id,
-      };
-      const res = await api.post("/items", newItem);
-      setItems((prev) => [...prev, res.data]);
+      });
+      setItems((prev) => [...prev, newItem]);
     } catch (err) {
       console.error("❌ Failed to add suggested item:", err);
     }

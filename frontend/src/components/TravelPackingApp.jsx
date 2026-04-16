@@ -27,6 +27,7 @@ const TravelPackingApp = () => {
       if (data.length > 0 && !currentTrip) {
         setCurrentTrip(data[0]);
         fetchPackingList(data[0]._id);
+        fetchSuggestedItems(data[0]);
       }
     } catch {
       setError('Failed to fetch trips');
@@ -126,17 +127,27 @@ const TravelPackingApp = () => {
     }
   };
 
-  // Suggested items (mock for now)
-  const suggestedItems = (weather) => [
-    { name: 'Passport', category: 'Documents', priority: 'high' },
-    { name: 'Phone Charger', category: 'Electronics', priority: 'high' },
-    { name: 'Toothbrush', category: 'Toiletries', priority: 'medium' },
-  ];
+  // Suggested items from API based on destination weather
+  const [suggestedItemsList, setSuggestedItemsList] = useState([]);
+
+  const fetchSuggestedItems = async (destination) => {
+    try {
+      const data = await apiService.getSuggestedItems(destination.name);
+      setSuggestedItemsList(data || []);
+    } catch {
+      setSuggestedItemsList([]);
+    }
+  };
 
   const addSuggestedItem = async (item) => {
     if (!currentTrip) return;
     try {
-      await apiService.addItem({ ...item, destinationId: currentTrip._id, packed: false });
+      await apiService.addItem({
+        name: item.name,
+        category: item.category || 'General',
+        priority: item.priority || 'medium',
+        destinationId: currentTrip._id,
+      });
       fetchPackingList(currentTrip._id);
     } catch {
       setError('Failed to add suggested item');
@@ -183,7 +194,7 @@ const TravelPackingApp = () => {
 
             <div className="space-y-2">
               {trips.map(trip => (
-                <div key={trip._id} onClick={() => { setCurrentTrip(trip); fetchPackingList(trip._id); }} className={`p-3 border rounded cursor-pointer ${currentTrip?._id === trip._id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                <div key={trip._id} onClick={() => { setCurrentTrip(trip); fetchPackingList(trip._id); fetchSuggestedItems(trip); }} className={`p-3 border rounded cursor-pointer ${currentTrip?._id === trip._id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
                   <div className="flex justify-between items-center">
                     <div className="flex items-center">
                       <MapPin className="w-4 h-4 mr-2"/> {trip.name}, {trip.country}
@@ -207,7 +218,7 @@ const TravelPackingApp = () => {
           <div className="lg:col-span-2 space-y-6">
             {currentTrip && (
               <>
-                <WeatherCard destination={currentTrip} />
+                <WeatherCard destination={currentTrip} addSuggestedItem={addSuggestedItem} />
 
                 <div className="bg-white rounded-lg shadow-md p-6">
                   <div className="flex justify-between items-center mb-4">
@@ -245,7 +256,7 @@ const TravelPackingApp = () => {
                   <div className="mt-6">
                     <h3 className="font-semibold mb-2">Suggested Items</h3>
                     <div className="flex gap-2 flex-wrap">
-                      {suggestedItems(currentTrip.weather).map((item, idx) => (
+                      {suggestedItemsList.map((item, idx) => (
                         <button key={idx} onClick={() => addSuggestedItem(item)} className="bg-gray-200 px-3 py-1 rounded hover:bg-gray-300">+ {item.name}</button>
                       ))}
                     </div>
